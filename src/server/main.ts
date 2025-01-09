@@ -3,7 +3,8 @@ import ViteExpress from "vite-express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { Auth } from "./src/model/auth";
-import { User } from "./src/model/users";
+import { User } from "./src/model/models";
+import { Product } from "./src/model/models";
 
 const SECRET_TEXT = "secretText";
 
@@ -11,8 +12,9 @@ const app = express();
 
 app.use(express.json());
 
-User.sync();
-Auth.sync();
+// User.sync({ force: true });
+// Auth.sync({ force: true });
+// Product.sync({ force: true });
 
 // signup
 app.post("/auth", async (req, res) => {
@@ -80,7 +82,7 @@ app.post("/auth/token", async (req, res) => {
   }
 });
 
-// middleware validador
+// middleware validador de usuario
 function validToken(req: any, res: any, next: any) {
   try {
     // obtenemos el token enviado desde el front
@@ -107,6 +109,37 @@ app.get("/me", validToken, async (req: any, res: any) => {
     res.status(200).send({ user });
   } catch (error: any) {
     res.status(500).json({ Error: error.message });
+  }
+});
+
+// new product
+app.post("/products", validToken, async (req: any, res: any) => {
+  try {
+    const { name, price, description } = req.body;
+    const user_id = req.user_id;
+    const product = await Product.create({
+      name,
+      price,
+      description,
+      UserId: user_id,
+    });
+    res.status(201).send({ product, message: "Product created successfully" });
+  } catch (error: any) {
+    res.status(500).json({ Error: error.message });
+  }
+});
+
+// get products by user
+app.get("/me/products", validToken, async (req: any, res: any) => {
+  try {
+    const user_id = req.user_id;
+    const products = await Product.findAll({
+      where: { UserId: user_id },
+      include: [User],
+    });
+    res.status(200).send({ products });
+  } catch (error: any) {
+    res.send(500).json({ Error: error.message });
   }
 });
 
